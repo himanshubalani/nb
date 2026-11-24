@@ -1,7 +1,9 @@
 # nb
-Session Resources for the Naive Bayes and Optimal Classifer Talk by me, Sahil and Vedant
+Session Resources for the Naive Bayes and Optimal Classifer Talk by Himanshu, Sahil and Vedant
 
-[⭐[PPT] Bayes Optimal Classifier and Naive Bayes Algorithm]
+[⭐[PDF] Session Slides on Bayes Optimal Classifier - GitHub](https://github.com/himanshubalani/nb/blob/55096c09cc84f27584f7b9c3f3a0d745024e076d/Bayes%20Optimal%20Classifier.pdf)
+
+[⭐[PDF] Session Slides on Bayes Optimal Classifier - Direct Download](https://raw.githubusercontent.com/himanshubalani/nb/55096c09cc84f27584f7b9c3f3a0d745024e076d/Bayes%20Optimal%20Classifier.pdf)
 
 [[Book] - Artificial Intelligence Structures and Strategies for  Complex Problem Solving.pdf](https://www.uoitc.edu.iq/images/documents/informatics-institute/exam_materials/artificial%20intelligence%20structures%20and%20strategies%20for%20%20complex%20problem%20solving.pdf#page=204)
 
