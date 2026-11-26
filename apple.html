@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A visual, step-by-step example of Bayes' Theorem, MAP, and the Bayes Optimal Classifier using apples and oranges.">
+<title>Comparing Apples and Oranges</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #fafaf8; --paper: #fff; --ink: #20211f; --muted: #70736e;
+    --line: #e8e8e2; --soft: #f1f2ed; --blue: #4268b2; --blue-soft: #edf2fc;
+    --orange: #d97732; --orange-soft: #fff2e8; --green: #34775a;
+    --shadow: 0 8px 28px rgba(30,32,26,.045);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  main { width: min(900px, calc(100% - 36px)); margin: 0 auto; padding: 64px 0 80px; }
+  .eyebrow { color: var(--muted); font: 600 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .12em; text-transform: uppercase; }
+  h1 { margin: 12px 0 12px; font-size: clamp(2.35rem, 7vw, 4.2rem); letter-spacing: -.065em; line-height: 1.02; font-weight: 760; }
+  h2 { margin: 0 0 12px; font-size: clamp(1.45rem, 4vw, 2rem); letter-spacing: -.04em; line-height: 1.2; }
+  h3 { margin: 0 0 7px; font-size: 1.04rem; letter-spacing: -.02em; }
+  p { margin: 8px 0 14px; }
+  .lede { max-width: 660px; color: var(--muted); font-size: 1.08rem; }
+  .intro { padding-bottom: 38px; border-bottom: 1px solid var(--line); }
+  .fruit-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 28px; }
+  .fruit { display:flex; align-items:center; gap:14px; padding:16px; background:var(--paper); border:1px solid var(--line); border-radius:16px; }
+  .fruit .emoji { font-size: 2.25rem; }
+  .fruit small { display:block; color:var(--muted); }
+  section { padding: 42px 0; border-bottom: 1px solid var(--line); }
+  .section-no { color: var(--blue); font: 650 12px ui-monospace, monospace; margin-bottom: 10px; }
+  .card { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:22px; box-shadow:var(--shadow); }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .math { overflow-x:auto; margin:16px 0; padding:17px 18px; border-radius:12px; background:var(--soft); font: 500 clamp(1rem, 3vw, 1.28rem)/1.8 Georgia, "Times New Roman", serif; text-align:center; white-space:nowrap; }
+  .math small { display:block; color:var(--muted); font: 12px/1.5 ui-sans-serif, system-ui; white-space:normal; }
+  .term { padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--paper); }
+  .term .symbol { color:var(--blue); font: 600 1.15rem Georgia,serif; }
+  .term .value { font-size:1.45rem; font-weight:750; letter-spacing:-.04em; margin-top:5px; }
+  .muted { color:var(--muted); }
+  .bar-group { margin:18px 0; }
+  .bar-head { display:flex; justify-content:space-between; gap:12px; font-size:.94rem; margin-bottom:7px; }
+  .track { height:11px; background:var(--soft); border-radius:99px; overflow:hidden; }
+  .fill { height:100%; border-radius:99px; }
+  .apple-fill { background:var(--blue); }
+  .orange-fill { background:var(--orange); }
+  .result { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:16px 18px; background:var(--orange-soft); border:1px solid #f2ddcc; border-radius:14px; margin-top:16px; }
+  .result strong { font-size:1.3rem; }
+  .pill { display:inline-block; padding:4px 9px; border-radius:99px; background:var(--blue-soft); color:var(--blue); font-size:.75rem; font-weight:700; }
+  .hypothesis { padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--paper); }
+  .hypothesis .top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .hypothesis .pct { font-weight:750; font-variant-numeric:tabular-nums; }
+  .hypothesis p { margin:7px 0 12px; color:var(--muted); font-size:.9rem; }
+  .compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px; }
+  .compare > div { padding:18px; border-radius:14px; background:var(--soft); }
+  .compare .winner { background:var(--orange-soft); }
+  .compare .big { font-size:1.45rem; font-weight:760; margin:6px 0 2px; }
+  .callout { border-left:3px solid var(--blue); padding:3px 0 3px 15px; color:var(--muted); margin:18px 0; }
+  .note { color:var(--muted); font-size:.88rem; }
+  .takeaway { margin-top:22px; padding:20px; border:1px solid var(--line); background:var(--paper); border-radius:16px; }
+  footer { padding-top:24px; color:var(--muted); font-size:.85rem; }
+  @media (max-width:620px) {
+    main { padding-top:42px; }
+    .grid-2,.grid-3,.compare { grid-template-columns:1fr; }
+    .fruit-row { gap:8px; }
+    .fruit { padding:12px; gap:8px; }
+    .fruit .emoji { font-size:1.8rem; }
+    .card { padding:17px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header class="intro">
+    <div class="eyebrow">A visual guide · Probability &amp; classification</div>
+    <h1>Comparing Apples<br>and Oranges<span style="color:var(--orange)">.</span></h1>
+    <p class="lede">One small fruit-classification problem to understand Bayes’ Theorem, Maximum A Posteriori (MAP), and the Bayes Optimal Classifier.</p>
+    <div class="fruit-row" aria-label="The two possible fruit classes">
+      <div class="fruit"><span class="emoji" aria-hidden="true">🍎</span><div><strong>Apple</strong><small>One possible class</small></div></div>
+      <div class="fruit"><span class="emoji" aria-hidden="true">🍊</span><div><strong>Orange</strong><small>Another possible class</small></div></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="section-no">01 / THE PROBLEM</div>
+    <h2>What fruit are we looking at?</h2>
+    <p>Imagine an AI system receives a fruit with a particular set of observed features. For this example, call that evidence <strong>E</strong>. The system must decide whether the fruit is an apple or an orange.</p>
+    <div class="card">
+      <h3>Our assumed training-data probabilities</h3>
+      <div class="grid-2">
+        <div class="term"><div class="symbol">P(Apple)</div><div class="value">0.60</div><div class="muted">60% of fruits are apples</div></div>
+        <div class="term"><div class="symbol">P(Orange)</div><div class="value">0.40</div><div class="muted">40% of fruits are oranges</div></div>
+        <div class="term"><div class="symbol">P(E | Apple)</div><div class="value">0.20</div><div class="muted">20% of apples show E</div></div>
+        <div class="term"><div class="symbol">P(E | Orange)</div><div class="value">0.80</div><div class="muted">80% of oranges show E</div></div>
+      </div>
+      <p class="note">These are illustrative values chosen to make the calculation easy to follow.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-no">02 / BAYES’ THEOREM</div>
+    <h2>Update the probabilities with evidence</h2>
+    <p>Bayes’ Theorem combines what was likely before seeing the evidence (the prior) with how likely the evidence is under each class (the likelihood).</p>
+    <div class="math">P(Class | E) = [ P(E | Class) × P(Class) ] / P(E)<small>Posterior = likelihood × prior ÷ evidence</small></div>
+    <h3>First, calculate the evidence</h3>
+    <p>The evidence is the overall probability of observing E, across both possible classes.</p>
+    <div class="math">P(E) = (0.20 × 0.60) + (0.80 × 0.40)<br>= 0.12 + 0.32 = <strong>0.44</strong></div>
+    <div class="grid-2">
+      <div class="term"><div class="symbol">P(Apple | E)</div><div class="value">0.12 / 0.44</div><strong>27.27%</strong></div>
+      <div class="term"><div class="symbol">P(Orange | E)</div><div class="value">0.32 / 0.44</div><strong>72.73%</strong></div>
+    </div>
+    <div class="bar-group">
+      <div class="bar-head"><span>Apple</span><strong>27.27%</strong></div>
+      <div class="track"><div class="fill apple-fill" style="width:27.27%"></div></div>
+    </div>
+    <div class="bar-group">
+      <div class="bar-head"><span>Orange</span><strong>72.73%</strong></div>
+      <div class="track"><div class="fill orange-fill" style="width:72.73%"></div></div>
+    </div>
+    <div class="result"><div><span class="pill">Bayes’ Theorem result</span><br><strong>More likely: Orange</strong></div><span style="font-size:2rem" aria-hidden="true">🍊</span></div>
+  </section>
+
+  <section>
+    <div class="section-no">03 / MAP</div>
+    <h2>Choose the most probable class</h2>
+    <p>Maximum A Posteriori (MAP) chooses the hypothesis with the highest posterior probability. In this two-class example, it compares the posterior probabilities we just calculated.</p>
+    <div class="math">MAP = arg max<sub>class</sub> P(Class | E)</div>
+    <div class="compare">
+      <div><span class="muted">Apple posterior</span><div class="big">27.27%</div><div class="muted">Lower probability</div></div>
+      <div class="winner"><span class="muted">Orange posterior</span><div class="big">72.73%</div><div><strong>Highest probability → chosen</strong></div></div>
+    </div>
+    <div class="callout">MAP makes a single best choice: it selects the class with the largest posterior probability.</div>
+  </section>
+
+  <section>
+    <div class="section-no">04 / FROM MAP TO BAYES OPTIMAL</div>
+    <h2>What if we consider every hypothesis?</h2>
+    <p>MAP focuses on the single most probable hypothesis. The Bayes Optimal Classifier goes further: it considers all hypotheses and combines their predictions, weighted by how probable each hypothesis is given the training data.</p>
+    <div class="card">
+      <h3>Imagine three candidate hypotheses</h3>
+      <p class="note">For the same new fruit, suppose these hypotheses have the following posterior probabilities and predictions.</p>
+      <div class="grid-3">
+        <div class="hypothesis">
+          <div class="top"><strong>H1</strong><span class="pct">45%</span></div>
+          <p>Most probable individual hypothesis</p>
+          <span class="pill">Predicts Apple 🍎</span>
+          <div class="track" style="margin-top:12px"><div class="fill apple-fill" style="width:45%"></div></div>
+        </div>
+        <div class="hypothesis">
+          <div class="top"><strong>H2</strong><span class="pct">35%</span></div>
+          <p>Second hypothesis</p>
+          <span class="pill">Predicts Orange 🍊</span>
+          <div class="track" style="margin-top:12px"><div class="fill orange-fill" style="width:35%"></div></div>
+        </div>
+        <div class="hypothesis">
+          <div class="top"><strong>H3</strong><span class="pct">20%</span></div>
+          <p>Third hypothesis</p>
+          <span class="pill">Predicts Orange 🍊</span>
+          <div class="track" style="margin-top:12px"><div class="fill orange-fill" style="width:20%"></div></div>
+        </div>
+      </div>
+      <p class="note">The hypothesis probabilities add up to 100%.</p>
+    </div>
+    <h3 style="margin-top:22px">What does MAP choose?</h3>
+    <p>MAP selects H1 because it is the single most probable hypothesis (45%). Since H1 predicts Apple, MAP predicts Apple.</p>
+    <h3 style="margin-top:22px">What does Bayes Optimal choose?</h3>
+    <p>It adds the posterior-weighted support for each class. Here, each hypothesis makes one definite prediction:</p>
+    <div class="bar-group">
+      <div class="bar-head"><span>Apple · H1</span><strong>45%</strong></div>
+      <div class="track"><div class="fill apple-fill" style="width:45%"></div></div>
+    </div>
+    <div class="bar-group">
+      <div class="bar-head"><span>Orange · H2 + H3</span><strong>55%</strong></div>
+      <div class="track"><div class="fill orange-fill" style="width:55%"></div></div>
+    </div>
+    <div class="math">Apple: 0.45<br>Orange: 0.35 + 0.20 = 0.55</div>
+    <div class="compare">
+      <div><span class="muted">MAP prediction</span><div class="big">Apple 🍎</div><div class="muted">Follows H1 only</div></div>
+      <div class="winner"><span class="muted">Bayes Optimal prediction</span><div class="big">Orange 🍊</div><div><strong>55% combined support</strong></div></div>
+    </div>
+    <div class="callout">The most probable individual hypothesis predicts Apple, but the combined support of all hypotheses favours Orange. That is the key distinction.</div>
+    <p class="note">This is a simplified illustration in which each hypothesis makes a deterministic class prediction. In the general case, hypotheses can assign probabilities to each class.</p>
+  </section>
+
+  <section>
+    <div class="section-no">05 / THE GENERAL IDEA</div>
+    <h2>The Bayes Optimal Classifier</h2>
+    <p>For each possible class, the classifier adds up the support contributed by every hypothesis. Each contribution is weighted by the posterior probability of that hypothesis.</p>
+    <div class="math">ŷ = arg max<sub>v ∈ V</sub> Σ<sub>h ∈ H</sub> P(v | h) × P(h | D)</div>
+    <div class="grid-2">
+      <div class="term"><div class="symbol">V</div><div><strong>Class labels</strong></div><div class="muted">All possible outputs, such as Apple and Orange.</div></div>
+      <div class="term"><div class="symbol">H</div><div><strong>Hypothesis space</strong></div><div class="muted">All candidate models or explanations.</div></div>
+      <div class="term"><div class="symbol">P(h | D)</div><div><strong>Posterior of a hypothesis</strong></div><div class="muted">How probable a hypothesis is given the training data.</div></div>
+      <div class="term"><div class="symbol">P(v | h)</div><div><strong>Class prediction probability</strong></div><div class="muted">How likely hypothesis h is to predict class v for the new instance.</div></div>
+    </div>
+    <div class="takeaway">
+      <h3>Remember the progression</h3>
+      <p><strong>Bayes’ Theorem</strong> updates probabilities using evidence.</p>
+      <p><strong>MAP</strong> chooses the single most probable hypothesis.</p>
+      <p><strong>Bayes Optimal</strong> combines predictions from all hypotheses, weighted by their posterior probabilities.</p>
+    </div>
+  </section>
+
+  <section style="border-bottom:0">
+    <div class="section-no">06 / WHAT COMES NEXT</div>
+    <h2>Making Bayesian classification practical</h2>
+    <p>Considering every possible hypothesis can be computationally expensive. Naive Bayes makes classification practical by using a simplifying assumption: features are conditionally independent given the class.</p>
+    <div class="result" style="background:var(--blue-soft);border-color:#dce5f8">
+      <div><span class="pill">Next topic</span><br><strong>Naive Bayes Algorithm</strong><div class="muted">From probability theory to a practical classifier.</div></div>
+      <span style="font-size:1.8rem" aria-hidden="true">→</span>
+    </div>
+  </section>
+  <footer>Comparing Apples and Oranges · An illustrative learning example for Bayes’ Theorem, MAP, and the Bayes Optimal Classifier.</footer>
+</main>
+</body>
+</html>
