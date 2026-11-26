@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A visual, step-by-step example of Bayes' Rule, MAP classification, and the base-rate effect using a medical diagnosis problem.">
+<title>Medical Diagnosis with Bayes’ Rule</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #fafaf8; --paper: #fff; --ink: #20211f; --muted: #70736e;
+    --line: #e8e8e2; --soft: #f1f2ed; --blue: #4268b2; --blue-soft: #edf2fc;
+    --orange: #d97732; --orange-soft: #fff2e8; --green: #34775a; --green-soft: #ebf5f0;
+    --shadow: 0 8px 28px rgba(30,32,26,.045);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  main { width: min(900px, calc(100% - 36px)); margin: 0 auto; padding: 64px 0 80px; }
+  .eyebrow { color: var(--muted); font: 600 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .12em; text-transform: uppercase; }
+  h1 { margin: 12px 0 12px; font-size: clamp(2.35rem, 7vw, 4.2rem); letter-spacing: -.065em; line-height: 1.02; font-weight: 760; }
+  h2 { margin: 0 0 12px; font-size: clamp(1.45rem, 4vw, 2rem); letter-spacing: -.04em; line-height: 1.2; }
+  h3 { margin: 0 0 7px; font-size: 1.04rem; letter-spacing: -.02em; }
+  p { margin: 8px 0 14px; }
+  .lede { max-width: 660px; color: var(--muted); font-size: 1.08rem; }
+  .intro { padding-bottom: 38px; border-bottom: 1px solid var(--line); }
+  .pair-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 28px; }
+  .pair { display:flex; align-items:center; gap:14px; padding:16px; background:var(--paper); border:1px solid var(--line); border-radius:16px; }
+  .pair .badge {
+    width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+    font: 700 1.05rem Georgia, serif; flex-shrink: 0;
+  }
+  .badge-orange { background: var(--orange-soft); color: var(--orange); }
+  .badge-blue { background: var(--blue-soft); color: var(--blue); }
+  .pair small { display:block; color:var(--muted); }
+  section { padding: 42px 0; border-bottom: 1px solid var(--line); }
+  .section-no { color: var(--blue); font: 650 12px ui-monospace, monospace; margin-bottom: 10px; }
+  .card { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:22px; box-shadow:var(--shadow); }
+  .card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+  .card-head h3 { margin:0; }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .math { overflow-x:auto; margin:16px 0; padding:17px 18px; border-radius:12px; background:var(--soft); font: 500 clamp(1rem, 3vw, 1.24rem)/1.8 Georgia, "Times New Roman", serif; text-align:center; white-space:nowrap; }
+  .math small { display:block; color:var(--muted); font: 12px/1.5 ui-sans-serif, system-ui; white-space:normal; }
+  .term { padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--paper); }
+  .term .symbol { color:var(--blue); font: 600 1.08rem Georgia,serif; }
+  .term .symbol.is-orange { color:var(--orange); }
+  .term .value { font-size:1.45rem; font-weight:750; letter-spacing:-.04em; margin-top:5px; font-variant-numeric:tabular-nums; }
+  .muted { color:var(--muted); }
+  .bar-group { margin:18px 0; }
+  .bar-head { display:flex; justify-content:space-between; gap:12px; font-size:.94rem; margin-bottom:7px; }
+  .bar-head strong { font-variant-numeric:tabular-nums; }
+  .track { height:11px; background:var(--soft); border-radius:99px; overflow:hidden; }
+  .fill { height:100%; border-radius:99px; }
+  .cancer-fill { background:var(--orange); }
+  .healthy-fill { background:var(--blue); }
+  .result { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:16px 18px; background:var(--blue-soft); border:1px solid #dce5f8; border-radius:14px; margin-top:16px; }
+  .result.is-cancer { background:var(--orange-soft); border-color:#f2ddcc; }
+  .result.is-tie { background:var(--soft); border-color:var(--line); }
+  .result strong { font-size:1.3rem; }
+  .pill { display:inline-block; padding:4px 9px; border-radius:99px; background:var(--blue-soft); color:var(--blue); font-size:.75rem; font-weight:700; }
+  .pill.is-orange { background:var(--orange-soft); color:var(--orange); }
+  .compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px; }
+  .compare > div { padding:18px; border-radius:14px; background:var(--soft); }
+  .compare .winner-healthy { background:var(--blue-soft); }
+  .compare .winner-cancer { background:var(--orange-soft); }
+  .compare .big { font-size:1.45rem; font-weight:760; margin:6px 0 2px; font-variant-numeric:tabular-nums; }
+  .callout { border-left:3px solid var(--blue); padding:3px 0 3px 15px; color:var(--muted); margin:18px 0; }
+  .note { color:var(--muted); font-size:.88rem; }
+  .takeaway { margin-top:22px; padding:20px; border:1px solid var(--line); background:var(--paper); border-radius:16px; }
+  footer { padding-top:24px; color:var(--muted); font-size:.85rem; }
+
+  /* Minimal interactive controls */
+  .slider { width:100%; margin:10px 0 4px; accent-color:var(--blue); cursor:pointer; }
+  .slider.is-orange { accent-color:var(--orange); }
+  .reset-btn {
+    border:1px solid var(--line); background:var(--soft); color:var(--muted);
+    border-radius:99px; padding:4px 10px; font:600 12px/1.3 inherit; cursor:pointer;
+  }
+  .reset-btn:hover { color:var(--ink); border-color:#d4d4cc; }
+  .quiz-card { margin-top:22px; padding:20px; border:1px solid var(--line); background:var(--paper); border-radius:16px; }
+  .quiz-options { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+  .quiz-btn {
+    border:1px solid var(--line); background:var(--soft); color:var(--ink);
+    border-radius:10px; padding:8px 18px; font:650 .92rem/1.3 inherit; cursor:pointer;
+  }
+  .quiz-btn:hover { border-color:#c8c8be; }
+  .quiz-btn.correct { background:var(--green-soft); border-color:#b8decb; color:var(--green); }
+  .quiz-btn.incorrect { background:var(--orange-soft); border-color:#f2d4bc; color:var(--orange); }
+  .quiz-feedback {
+    margin-top:14px; padding:12px 14px; border-radius:12px; font-size:.93rem;
+    background:var(--soft); border:1px solid var(--line);
+  }
+  .quiz-feedback.correct { background:var(--green-soft); border-color:#b8decb; }
+  .quiz-feedback.incorrect { background:var(--orange-soft); border-color:#f2d4bc; }
+
+  @media (max-width:620px) {
+    main { padding-top:42px; }
+    .grid-2,.grid-3,.compare,.pair-row { grid-template-columns:1fr; }
+    .card { padding:17px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header class="intro">
+    <div class="eyebrow">A visual guide · Medical diagnosis &amp; Bayes’ rule</div>
+    <h1>A Positive Test<br>Isn’t Everything<span style="color:var(--orange)">.</span></h1>
+    <p class="lede">A classic medical diagnosis problem showing why a 98% sensitive test can still yield a low posterior probability—and how the base-rate effect shapes MAP classification.</p>
+    <div class="pair-row" aria-label="The two competing hypotheses">
+      <div class="pair">
+        <div class="badge badge-orange">h1</div>
+        <div><strong>cancer</strong><small>Patient has cancer</small></div>
+      </div>
+      <div class="pair">
+        <div class="badge badge-blue">h2</div>
+        <div><strong>¬cancer</strong><small>Patient does not have cancer</small></div>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="section-no">01 / THE PROBLEM</div>
+    <h2>A patient tests positive (⊕)</h2>
+    <p>A lab test returns one of two outcomes: <strong>⊕</strong> (positive) or <strong>⊖</strong> (negative). A new patient’s lab test comes back <strong>positive (⊕)</strong>. Should the patient be diagnosed with cancer or not?</p>
+    <div class="card">
+      <div class="card-head">
+        <h3>Given probabilities</h3>
+        <button type="button" class="reset-btn" id="diag-reset">Reset</button>
+      </div>
+      <div class="grid-3">
+        <div class="term">
+          <label for="prior-cancer" class="symbol is-orange">P(cancer)</label>
+          <div class="value" id="val-prior-cancer">0.009</div>
+          <input id="prior-cancer" class="slider is-orange" type="range" min="0" max="0.25" step="0.001" value="0.009">
+          <div class="muted" id="desc-prior-cancer">0.9% prior prevalence</div>
+        </div>
+        <div class="term">
+          <label for="sensitivity" class="symbol is-orange">P(⊕ | cancer)</label>
+          <div class="value" id="val-sensitivity">0.98</div>
+          <input id="sensitivity" class="slider is-orange" type="range" min="0" max="1" step="0.01" value="0.98">
+          <div class="muted" id="desc-sensitivity">98% true positive rate (sensitivity)</div>
+        </div>
+        <div class="term">
+          <label for="specificity" class="symbol">P(⊖ | ¬cancer)</label>
+          <div class="value" id="val-specificity">0.97</div>
+          <input id="specificity" class="slider" type="range" min="0" max="1" step="0.01" value="0.97">
+          <div class="muted" id="desc-specificity">97% true negative rate (specificity)</div>
+        </div>
+      </div>
+      <p class="note" style="margin-bottom:0">Drag the sliders to explore how prevalence, sensitivity, and specificity shift the diagnosis.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-no">02 / COMPLEMENT PROBABILITIES</div>
+    <h2>Fill in the missing probabilities</h2>
+    <p>Because each pair of outcomes covers all possibilities, we can derive the prior and likelihood for the healthy hypothesis directly.</p>
+    <div class="grid-2">
+      <div class="term">
+        <div class="symbol">P(¬cancer) = 1 − P(cancer)</div>
+        <div class="value" id="val-prior-healthy">0.991</div>
+        <div class="muted" id="desc-prior-healthy">1 − 0.009 = 0.991 (99.1% healthy)</div>
+      </div>
+      <div class="term">
+        <div class="symbol">P(⊕ | ¬cancer) = 1 − P(⊖ | ¬cancer)</div>
+        <div class="value" id="val-fpr">0.03</div>
+        <div class="muted" id="desc-fpr">1 − 0.97 = 0.03 (3% false positive rate)</div>
+      </div>
+    </div>
+    <div class="callout">This gives us everything needed: the prior and likelihood for both hypotheses.</div>
+  </section>
+
+  <section>
+    <div class="section-no">03 / MAP SIMPLIFICATION</div>
+    <h2>Compare the numerators first</h2>
+    <p>Applying Bayes’ rule to a hypothesis <em>h</em> given positive evidence ⊕ gives <code>P(h | ⊕) = P(⊕ | h) P(h) / P(⊕)</code>. Since <strong>P(⊕)</strong> is identical for both hypotheses, MAP compares the numerators directly.</p>
+    <div class="math">P(h | ⊕) ∝ P(⊕ | h) × P(h)<small>Unnormalized score = likelihood × prior</small></div>
+    <div class="compare">
+      <div id="map-cancer-box">
+        <span class="muted">Applied to cancer</span>
+        <div class="big" id="joint-cancer">0.00882</div>
+        <div class="muted" id="joint-cancer-eq">0.98 × 0.009 = 0.00882</div>
+      </div>
+      <div id="map-healthy-box" class="winner-healthy">
+        <span class="muted">Applied to ¬cancer</span>
+        <div class="big" id="joint-healthy">0.02973</div>
+        <div class="muted" id="joint-healthy-eq">0.03 × 0.991 = 0.02973</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-no">04 / NORMALIZED POSTERIORS</div>
+    <h2>Compute the actual probabilities</h2>
+    <p>To turn those scores into true probabilities that sum to 100%, divide each numerator by the marginal probability <strong>P(⊕)</strong>—the total probability of getting a positive test.</p>
+    <div class="math" id="marginal-math">P(⊕) = 0.00882 + 0.02973 = <strong>0.03855</strong><small>Total probability of observing a positive test result</small></div>
+    <div class="grid-2">
+      <div class="term"><div class="symbol is-orange">P(cancer | ⊕)</div><div class="value" id="frac-cancer">0.00882 / 0.03855</div><strong id="pct-cancer">22.88%</strong></div>
+      <div class="term"><div class="symbol">P(¬cancer | ⊕)</div><div class="value" id="frac-healthy">0.02973 / 0.03855</div><strong id="pct-healthy">77.12%</strong></div>
+    </div>
+    <div class="bar-group">
+      <div class="bar-head"><span>cancer</span><strong id="bar-pct-cancer">22.88%</strong></div>
+      <div class="track"><div class="fill cancer-fill" id="bar-fill-cancer" style="width:22.88%"></div></div>
+    </div>
+    <div class="bar-group">
+      <div class="bar-head"><span>¬cancer</span><strong id="bar-pct-healthy">77.12%</strong></div>
+      <div class="track"><div class="fill healthy-fill" id="bar-fill-healthy" style="width:77.12%"></div></div>
+    </div>
+    <div class="result" id="diag-result" aria-live="polite">
+      <div>
+        <span class="pill" id="diag-pill">MAP classification</span><br>
+        <strong id="diag-winner-text">Diagnose as ¬cancer (not having cancer)</strong>
+        <div class="muted" id="diag-winner-sub">77.12% &gt; 22.88%, despite a positive test result</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-no">05 / THE BASE-RATE EFFECT</div>
+    <h2>Why this is counterintuitive—but correct</h2>
+    <p id="base-rate-explain">The test’s 98% sensitivity sounds very reliable, but because cancer’s base prevalence (0.9%) is so low, the much larger pool of healthy patients produces more false positives (3% of 99.1% of patients) than the small cancer-positive pool produces true positives (98% of 0.9% of patients).</p>
+    <div class="card">
+      <h3>Seen through 100,000 patients</h3>
+      <p class="note">Translating probabilities into whole people makes the base-rate effect immediate.</p>
+      <div class="grid-3">
+        <div class="term">
+          <div class="symbol is-orange">True positives</div>
+          <div class="value" id="freq-tp">882</div>
+          <div class="muted" id="freq-tp-desc">Out of 900 with cancer</div>
+        </div>
+        <div class="term">
+          <div class="symbol">False positives</div>
+          <div class="value" id="freq-fp">2,973</div>
+          <div class="muted" id="freq-fp-desc">Out of 99,100 healthy</div>
+        </div>
+        <div class="term">
+          <div class="symbol">All positive tests</div>
+          <div class="value" id="freq-total">3,855</div>
+          <div class="muted" id="freq-total-desc">882 / 3,855 = 22.88% have cancer</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="quiz-card" id="quick-check">
+      <div class="eyebrow">Quick check</div>
+      <h3 style="margin-top:8px">If a test has 98% sensitivity and returns positive, does that mean there is a 98% probability the patient has the disease?</h3>
+      <div class="quiz-options">
+        <button type="button" class="quiz-btn" data-answer="yes">Yes</button>
+        <button type="button" class="quiz-btn" data-answer="no">No</button>
+      </div>
+      <div class="quiz-feedback" id="quiz-feedback" hidden aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section style="border-bottom:0">
+    <div class="section-no">06 / TAKEAWAY</div>
+    <h2>From single evidence to many features</h2>
+    <p>Here we updated our belief using a single test result (⊕). When diagnosing or classifying with <em>many</em> observed features at once—like words in an email—the <strong>Naïve Bayes Algorithm</strong> applies this same Bayes rule by assuming features are conditionally independent given the class.</p>
+    <div class="takeaway">
+      <div class="muted" style="font-size:.86rem">Source problem: Artificial Intelligence end-semester examination (KVLU/MW–25/5558), M.Tech. CSE (AI &amp; ML), Ramdeobaba University, Nagpur.</div>
+    </div>
+  </section>
+  <footer>Medical Diagnosis with Bayes’ Rule · An illustrative companion to Bayes Optimal Classifier and Naïve Bayes.</footer>
+</main>
+
+<script>
+  (function () {
+    function fmt5(n) {
+      const rounded = Math.round(n * 100000) / 100000;
+      const s = rounded.toFixed(5).replace(/0+$/, '');
+      const parts = s.split('.');
+      if (!parts[1] || parts[1].length < 2) return rounded.toFixed(2);
+      return s;
+    }
+
+    function fmtInt(n) {
+      return Math.round(n).toLocaleString('en-US');
+    }
+
+    const priorCancerEl = document.getElementById('prior-cancer');
+    const sensitivityEl = document.getElementById('sensitivity');
+    const specificityEl = document.getElementById('specificity');
+    const resetEl = document.getElementById('diag-reset');
+
+    function updateDiagnosis() {
+      const pCancer = parseFloat(priorCancerEl.value);
+      const pHealthy = Math.round((1 - pCancer) * 1000) / 1000;
+      const sens = parseFloat(sensitivityEl.value);
+      const spec = parseFloat(specificityEl.value);
+      const fpr = Math.round((1 - spec) * 100) / 100;
+
+      // Section 01
+      document.getElementById('val-prior-cancer').textContent = pCancer.toFixed(3);
+      document.getElementById('desc-prior-cancer').textContent = `${(pCancer * 100).toFixed(1)}% prior prevalence`;
+      document.getElementById('val-sensitivity').textContent = sens.toFixed(2);
+      document.getElementById('desc-sensitivity').textContent = `${Math.round(sens * 100)}% true positive rate (sensitivity)`;
+      document.getElementById('val-specificity').textContent = spec.toFixed(2);
+      document.getElementById('desc-specificity').textContent = `${Math.round(spec * 100)}% true negative rate (specificity)`;
+
+      // Section 02
+      document.getElementById('val-prior-healthy').textContent = pHealthy.toFixed(3);
+      document.getElementById('desc-prior-healthy').textContent = `1 − ${pCancer.toFixed(3)} = ${pHealthy.toFixed(3)} (${(pHealthy * 100).toFixed(1)}% healthy)`;
+      document.getElementById('val-fpr').textContent = fpr.toFixed(2);
+      document.getElementById('desc-fpr').textContent = `1 − ${spec.toFixed(2)} = ${fpr.toFixed(2)} (${Math.round(fpr * 100)}% false positive rate)`;
+
+      // Section 03
+      const jointCancer = sens * pCancer;
+      const jointHealthy = fpr * pHealthy;
+      const marginal = jointCancer + jointHealthy;
+
+      document.getElementById('joint-cancer').textContent = fmt5(jointCancer);
+      document.getElementById('joint-cancer-eq').textContent = `${sens.toFixed(2)} × ${pCancer.toFixed(3)} = ${fmt5(jointCancer)}`;
+      document.getElementById('joint-healthy').textContent = fmt5(jointHealthy);
+      document.getElementById('joint-healthy-eq').textContent = `${fpr.toFixed(2)} × ${pHealthy.toFixed(3)} = ${fmt5(jointHealthy)}`;
+
+      const cancerBox = document.getElementById('map-cancer-box');
+      const healthyBox = document.getElementById('map-healthy-box');
+
+      // Section 04
+      document.getElementById('marginal-math').innerHTML =
+        `P(⊕) = ${fmt5(jointCancer)} + ${fmt5(jointHealthy)} = <strong>${fmt5(marginal)}</strong>` +
+        `<small>Total probability of observing a positive test result</small>`;
+
+      const resultEl = document.getElementById('diag-result');
+      const pillEl = document.getElementById('diag-pill');
+      const winnerTextEl = document.getElementById('diag-winner-text');
+      const winnerSubEl = document.getElementById('diag-winner-sub');
+
+      // Section 05 natural frequencies out of 100,000
+      const pop = 100000;
+      const nCancer = pop * pCancer;
+      const nHealthy = pop * pHealthy;
+      const tp = nCancer * sens;
+      const fp = nHealthy * fpr;
+      const totalPos = tp + fp;
+
+      document.getElementById('freq-tp').textContent = fmtInt(tp);
+      document.getElementById('freq-tp-desc').textContent = `Out of ${fmtInt(nCancer)} with cancer`;
+      document.getElementById('freq-fp').textContent = fmtInt(fp);
+      document.getElementById('freq-fp-desc').textContent = `Out of ${fmtInt(nHealthy)} healthy`;
+      document.getElementById('freq-total').textContent = fmtInt(totalPos);
+
+      if (marginal === 0) {
+        cancerBox.className = '';
+        healthyBox.className = '';
+        document.getElementById('frac-cancer').textContent = '0.00 / 0.00';
+        document.getElementById('frac-healthy').textContent = '0.00 / 0.00';
+        document.getElementById('pct-cancer').textContent = 'Undefined';
+        document.getElementById('pct-healthy').textContent = 'Undefined';
+        document.getElementById('bar-pct-cancer').textContent = '0.00%';
+        document.getElementById('bar-pct-healthy').textContent = '0.00%';
+        document.getElementById('bar-fill-cancer').style.width = '0%';
+        document.getElementById('bar-fill-healthy').style.width = '0%';
+
+        resultEl.className = 'result is-tie';
+        pillEl.className = 'pill';
+        winnerTextEl.textContent = 'Undefined (P(⊕) = 0)';
+        winnerSubEl.textContent = 'A positive test result has zero probability under these settings';
+        document.getElementById('freq-total-desc').textContent = '0 positive tests expected';
+        document.getElementById('base-rate-explain').textContent =
+          'Under these settings, neither group produces any positive tests, so the posterior given a positive test is undefined.';
+        return;
+      }
+
+      const postCancer = (jointCancer / marginal) * 100;
+      const postHealthy = (jointHealthy / marginal) * 100;
+      const cancerStr = `${postCancer.toFixed(2)}%`;
+      const healthyStr = `${postHealthy.toFixed(2)}%`;
+
+      document.getElementById('frac-cancer').textContent = `${fmt5(jointCancer)} / ${fmt5(marginal)}`;
+      document.getElementById('frac-healthy').textContent = `${fmt5(jointHealthy)} / ${fmt5(marginal)}`;
+      document.getElementById('pct-cancer').textContent = cancerStr;
+      document.getElementById('pct-healthy').textContent = healthyStr;
+      document.getElementById('bar-pct-cancer').textContent = cancerStr;
+      document.getElementById('bar-pct-healthy').textContent = healthyStr;
+      document.getElementById('bar-fill-cancer').style.width = `${postCancer}%`;
+      document.getElementById('bar-fill-healthy').style.width = `${postHealthy}%`;
+
+      document.getElementById('freq-total-desc').textContent = `${fmtInt(tp)} / ${fmtInt(totalPos)} = ${cancerStr} have cancer`;
+
+      if (Math.abs(postCancer - postHealthy) < 0.005) {
+        cancerBox.className = '';
+        healthyBox.className = '';
+        resultEl.className = 'result is-tie';
+        pillEl.className = 'pill';
+        winnerTextEl.textContent = 'Tied: cancer and ¬cancer are equally likely';
+        winnerSubEl.textContent = `${cancerStr} vs ${healthyStr}`;
+      } else if (postCancer > postHealthy) {
+        cancerBox.className = 'winner-cancer';
+        healthyBox.className = '';
+        resultEl.className = 'result is-cancer';
+        pillEl.className = 'pill is-orange';
+        winnerTextEl.textContent = 'Diagnose as cancer';
+        winnerSubEl.textContent = `${cancerStr} > ${healthyStr} — true positives outweigh false positives`;
+      } else {
+        cancerBox.className = '';
+        healthyBox.className = 'winner-healthy';
+        resultEl.className = 'result';
+        pillEl.className = 'pill';
+        winnerTextEl.textContent = 'Diagnose as ¬cancer (not having cancer)';
+        winnerSubEl.textContent = `${healthyStr} > ${cancerStr}, despite a positive test result`;
+      }
+
+      if (postHealthy >= postCancer) {
+        document.getElementById('base-rate-explain').textContent =
+          `The test’s ${Math.round(sens * 100)}% sensitivity sounds high, but because cancer’s base prevalence (${(pCancer * 100).toFixed(1)}%) is low, the larger pool of healthy patients produces at least as many false positives (${Math.round(fpr * 100)}% of ${(pHealthy * 100).toFixed(1)}%) as the cancer-positive pool produces true positives (${Math.round(sens * 100)}% of ${(pCancer * 100).toFixed(1)}%).`;
+      } else {
+        document.getElementById('base-rate-explain').textContent =
+          `With a base prevalence of ${(pCancer * 100).toFixed(1)}%, ${Math.round(sens * 100)}% sensitivity, and ${Math.round(spec * 100)}% specificity, true positives (${Math.round(sens * 100)}% of ${(pCancer * 100).toFixed(1)}%) now outnumber false positives (${Math.round(fpr * 100)}% of ${(pHealthy * 100).toFixed(1)}%), flipping the MAP diagnosis to cancer.`;
+      }
+    }
+
+    [priorCancerEl, sensitivityEl, specificityEl].forEach((el) => {
+      el.addEventListener('input', updateDiagnosis);
+    });
+
+    resetEl.addEventListener('click', () => {
+      priorCancerEl.value = '0.009';
+      sensitivityEl.value = '0.98';
+      specificityEl.value = '0.97';
+      updateDiagnosis();
+    });
+
+    /* Quick knowledge check */
+    const quizBtns = document.querySelectorAll('#quick-check .quiz-btn');
+    const quizFeedback = document.getElementById('quiz-feedback');
+
+    quizBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const choice = btn.dataset.answer;
+        quizBtns.forEach((b) => b.classList.remove('correct', 'incorrect'));
+        quizFeedback.hidden = false;
+
+        if (choice === 'no') {
+          btn.classList.add('correct');
+          quizFeedback.className = 'quiz-feedback correct';
+          quizFeedback.innerHTML =
+            '<strong>Correct — No.</strong> 98% is <em>P(⊕ | cancer)</em> (the probability of testing positive given cancer), not <em>P(cancer | ⊕)</em>. Because the prior prevalence (0.9%) is so small, false positives among healthy patients outnumber true positives—leaving <em>P(cancer | ⊕)</em> at just 22.88%.';
+        } else {
+          btn.classList.add('incorrect');
+          quizFeedback.className = 'quiz-feedback incorrect';
+          quizFeedback.innerHTML =
+            '<strong>Not quite — the answer is No.</strong> Confusing <em>P(⊕ | cancer)</em> (98%) with <em>P(cancer | ⊕)</em> (22.88%) ignores the base rate. When a condition is rare, most positive tests can still come from healthy individuals.';
+        }
+      });
+    });
+
+    updateDiagnosis();
+  })();
+</script>
+</body>
+</html>
