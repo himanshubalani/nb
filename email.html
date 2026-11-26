@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A visual, step-by-step example of the Naïve Bayes algorithm for email spam and phishing classification.">
+<title>You did not win. Phishing Emails</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #fafaf8; --paper: #fff; --ink: #20211f; --muted: #70736e;
+    --line: #e8e8e2; --soft: #f1f2ed; --blue: #4268b2; --blue-soft: #edf2fc;
+    --orange: #d97732; --orange-soft: #fff2e8; --green: #34775a; --green-soft: #ebf5f0;
+    --shadow: 0 8px 28px rgba(30,32,26,.045);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  main { width: min(900px, calc(100% - 36px)); margin: 0 auto; padding: 64px 0 80px; }
+  .eyebrow { color: var(--muted); font: 600 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .12em; text-transform: uppercase; }
+  h1 { margin: 12px 0 12px; font-size: clamp(2.35rem, 7vw, 4.2rem); letter-spacing: -.065em; line-height: 1.02; font-weight: 760; }
+  h2 { margin: 0 0 12px; font-size: clamp(1.45rem, 4vw, 2rem); letter-spacing: -.04em; line-height: 1.2; }
+  h3 { margin: 0 0 7px; font-size: 1.04rem; letter-spacing: -.02em; }
+  p { margin: 8px 0 14px; }
+  .lede { max-width: 660px; color: var(--muted); font-size: 1.08rem; }
+  .intro { padding-bottom: 38px; border-bottom: 1px solid var(--line); }
+  .pair-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 28px; }
+  .pair { display:flex; align-items:center; gap:14px; padding:16px; background:var(--paper); border:1px solid var(--line); border-radius:16px; }
+  .pair .emoji { font-size: 2.1rem; }
+  .pair small { display:block; color:var(--muted); }
+  section { padding: 42px 0; border-bottom: 1px solid var(--line); }
+  .section-no { color: var(--blue); font: 650 12px ui-monospace, monospace; margin-bottom: 10px; }
+  .card { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:22px; box-shadow:var(--shadow); }
+  .card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+  .card-head h3 { margin:0; }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .math { overflow-x:auto; margin:16px 0; padding:17px 18px; border-radius:12px; background:var(--soft); font: 500 clamp(.95rem, 2.7vw, 1.18rem)/1.8 Georgia, "Times New Roman", serif; text-align:center; white-space:nowrap; }
+  .math small { display:block; color:var(--muted); font: 12px/1.5 ui-sans-serif, system-ui; white-space:normal; }
+  .term { padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--paper); }
+  .term .symbol { color:var(--blue); font: 600 1.08rem Georgia,serif; }
+  .term .symbol.is-orange { color:var(--orange); }
+  .term .value { font-size:1.45rem; font-weight:750; letter-spacing:-.04em; margin-top:5px; font-variant-numeric:tabular-nums; }
+  .muted { color:var(--muted); }
+  .bar-group { margin:18px 0; }
+  .bar-head { display:flex; justify-content:space-between; gap:12px; font-size:.94rem; margin-bottom:7px; }
+  .bar-head strong { font-variant-numeric:tabular-nums; }
+  .track { height:11px; background:var(--soft); border-radius:99px; overflow:hidden; }
+  .fill { height:100%; border-radius:99px; }
+  .spam-fill { background:var(--orange); }
+  .normal-fill { background:var(--blue); }
+  .result { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:16px 18px; background:var(--orange-soft); border:1px solid #f2ddcc; border-radius:14px; margin-top:16px; }
+  .result.is-normal { background:var(--blue-soft); border-color:#dce5f8; }
+  .result.is-tie { background:var(--soft); border-color:var(--line); }
+  .result strong { font-size:1.3rem; }
+  .pill { display:inline-block; padding:4px 9px; border-radius:99px; background:var(--blue-soft); color:var(--blue); font-size:.75rem; font-weight:700; }
+  .pill.is-orange { background:var(--orange-soft); color:var(--orange); }
+  .compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px; }
+  .compare > div { padding:18px; border-radius:14px; background:var(--soft); }
+  .compare .winner-spam { background:var(--orange-soft); }
+  .compare .winner-normal { background:var(--blue-soft); }
+  .compare .big { font-size:1.45rem; font-weight:760; margin:6px 0 2px; font-variant-numeric:tabular-nums; }
+  .callout { border-left:3px solid var(--blue); padding:3px 0 3px 15px; color:var(--muted); margin:18px 0; }
+  .note { color:var(--muted); font-size:.88rem; }
+  .takeaway { margin-top:22px; padding:20px; border:1px solid var(--line); background:var(--paper); border-radius:16px; }
+  footer { padding-top:24px; color:var(--muted); font-size:.85rem; }
+
+  /* Minimal interactive controls */
+  .slider { width:100%; margin:6px 0 2px; accent-color:var(--blue); cursor:pointer; }
+  .slider.is-orange { accent-color:var(--orange); }
+  .sub-stat { display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-top:14px; font-size:.92rem; }
+  .sub-stat strong { font-variant-numeric:tabular-nums; }
+  .reset-btn {
+    border:1px solid var(--line); background:var(--soft); color:var(--muted);
+    border-radius:99px; padding:4px 10px; font:600 12px/1.3 inherit; cursor:pointer;
+  }
+  .reset-btn:hover { color:var(--ink); border-color:#d4d4cc; }
+  .email-preview {
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;
+    padding:16px 18px; border:1px solid var(--line); border-radius:14px; background:var(--paper);
+  }
+  .word-toggles { display:flex; gap:8px; flex-wrap:wrap; }
+  .word-btn {
+    border:1px solid var(--line); background:var(--soft); color:var(--muted);
+    border-radius:99px; padding:6px 13px; font:650 .88rem/1.3 inherit; cursor:pointer;
+  }
+  .word-btn[aria-pressed="true"] {
+    background:var(--orange-soft); color:var(--orange); border-color:#f2d4bc;
+  }
+  .quiz-card { margin-top:22px; padding:20px; border:1px solid var(--line); background:var(--paper); border-radius:16px; }
+  .quiz-options { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+  .quiz-btn {
+    text-align:left; border:1px solid var(--line); background:var(--soft); color:var(--ink);
+    border-radius:10px; padding:10px 14px; font:600 .9rem/1.4 inherit; cursor:pointer;
+  }
+  .quiz-btn:hover { border-color:#c8c8be; }
+  .quiz-btn.correct { background:var(--green-soft); border-color:#b8decb; color:var(--green); }
+  .quiz-btn.incorrect { background:var(--orange-soft); border-color:#f2d4bc; color:var(--orange); }
+  .quiz-feedback {
+    margin-top:14px; padding:12px 14px; border-radius:12px; font-size:.93rem;
+    background:var(--soft); border:1px solid var(--line);
+  }
+  .quiz-feedback.correct { background:var(--green-soft); border-color:#b8decb; }
+  .quiz-feedback.incorrect { background:var(--orange-soft); border-color:#f2d4bc; }
+
+  @media (max-width:620px) {
+    main { padding-top:42px; }
+    .grid-2,.compare,.pair-row,.quiz-options { grid-template-columns:1fr; }
+    .card { padding:17px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header class="intro">
+    <div class="eyebrow">A visual guide · Naïve Bayes classification</div>
+    <h1>How emails end up<br>in spam folder<span style="color:var(--orange)">.</span></h1>
+    <p class="lede">A step-by-step numerical example showing how the Naïve Bayes classifier learns from 100 past emails to flag suspicious messages like <strong>“Free Lottery”</strong>.</p>
+    <div class="pair-row" aria-label="The two possible email categories">
+      <div class="pair">
+        <span class="emoji" aria-hidden="true">🐞</span>
+        <div><strong>Spam / Phishing</strong><small>Unwanted or scam email</small></div>
+      </div>
+      <div class="pair">
+        <span class="emoji" aria-hidden="true">✉️</span>
+        <div><strong>Normal</strong><small>Legitimate inbox email</small></div>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="section-no">01 / TRAINING PHASE</div>
+    <h2>Learn frequencies from 100 past emails</h2>
+    <p>In the training phase, Naïve Bayes counts how often each category appears (the <strong>priors</strong>) and how often trigger words appear inside each category (the <strong>feature likelihoods</strong>).</p>
+    <div class="card">
+      <div class="card-head">
+        <h3>Dataset of 100 emails</h3>
+        <button type="button" class="reset-btn" id="spam-reset">Reset</button>
+      </div>
+
+      <div class="term" style="margin-bottom:14px">
+        <div class="sub-stat" style="margin-top:0">
+          <label for="spam-count" class="symbol is-orange">Class split (100 emails total)</label>
+          <strong id="split-summary">20 Spam · 80 Normal</strong>
+        </div>
+        <input id="spam-count" class="slider is-orange" type="range" min="1" max="99" step="1" value="20" aria-label="Number of spam emails out of 100">
+        <div class="muted" id="prior-summary">P(Spam) = 20/100 = 0.20 · P(Normal) = 80/100 = 0.80</div>
+      </div>
+
+      <div class="grid-2">
+        <div class="term">
+          <div class="symbol is-orange">Spam emails</div>
+          <div class="value" id="val-p-spam">P(Spam) = 0.20</div>
+
+          <div class="sub-stat">
+            <label for="free-spam">Contains “Free”</label>
+            <strong id="val-free-spam">15/20 → 0.75</strong>
+          </div>
+          <input id="free-spam" class="slider is-orange" type="range" min="0" max="20" step="1" value="15">
+
+          <div class="sub-stat">
+            <label for="lottery-spam">Contains “Lottery”</label>
+            <strong id="val-lottery-spam">10/20 → 0.50</strong>
+          </div>
+          <input id="lottery-spam" class="slider is-orange" type="range" min="0" max="20" step="1" value="10">
+        </div>
+
+        <div class="term">
+          <div class="symbol">Normal emails</div>
+          <div class="value" id="val-p-normal">P(Normal) = 0.80</div>
+
+          <div class="sub-stat">
+            <label for="free-normal">Contains “Free”</label>
+            <strong id="val-free-normal">4/80 → 0.05</strong>
+          </div>
+          <input id="free-normal" class="slider" type="range" min="0" max="80" step="1" value="4">
+
+          <div class="sub-stat">
+            <label for="lottery-normal">Contains “Lottery”</label>
+            <strong id="val-lottery-normal">1/80 → 0.0125</strong>
+          </div>
+          <input id="lottery-normal" class="slider" type="range" min="0" max="80" step="1" value="1">
+        </div>
+      </div>
+      <p class="note" style="margin-bottom:0">Adjust the email counts above to see how word frequencies drive the classifier.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-no">02 / NEW EMAIL ARRIVES</div>
+    <h2>Apply the Naïve Bayes formula</h2>
+    <p>A brand-new email arrives. Toggle which trigger words appear in its text to test how the classifier evaluates the message:</p>
+
+    <div class="email-preview">
+      <div>
+        <div class="muted" style="font-size:.82rem">Incoming email text</div>
+        <strong id="email-text-display" style="font-size:1.12rem">“Free Lottery”</strong>
+      </div>
+      <div class="word-toggles" role="group" aria-label="Words present in incoming email">
+        <button type="button" class="word-btn" id="toggle-free" aria-pressed="true">✓ “Free”</button>
+        <button type="button" class="word-btn" id="toggle-lottery" aria-pressed="true">✓ “Lottery”</button>
+      </div>
+    </div>
+
+    <div class="math" id="nb-formula-spam">P(Spam | "Free Lottery") = [ P(Free | Spam) × P(Lottery | Spam) × P(Spam) ] / P("Free Lottery")</div>
+    <div class="math" id="nb-formula-normal">P(Normal | "Free Lottery") = [ P(Free | Normal) × P(Lottery | Normal) × P(Normal) ] / P("Free Lottery")</div>
+  </section>
+
+  <section>
+    <div class="section-no">03 / PREDICTION SCORES</div>
+    <h2>Drop the shared denominator to compare</h2>
+    <p>Since the denominator <strong id="denom-name">P(“Free Lottery”)</strong> is identical for both classes, we can omit it when comparing scores and multiply the prior by each word’s likelihood directly.</p>
+    <div class="compare">
+      <div id="score-spam-box" class="winner-spam">
+        <span class="muted">Score(Spam)</span>
+        <div class="big" id="score-spam-val">0.075</div>
+        <div class="muted" id="score-spam-eq">0.75 × 0.50 × 0.20 = 0.075</div>
+      </div>
+      <div id="score-normal-box">
+        <span class="muted">Score(Normal)</span>
+        <div class="big" id="score-normal-val">0.0005</div>
+        <div class="muted" id="score-normal-eq">0.05 × 0.0125 × 0.80 = 0.0005</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-no">04 / FINAL CLASSIFICATION</div>
+    <h2>Normalize into posterior probabilities</h2>
+    <p>Dividing each score by the sum of both scores converts them into percentages that add up to 100%.</p>
+    <div class="math" id="norm-math">P(Spam | "Free Lottery") = 0.075 / (0.075 + 0.0005) = <strong>99.34%</strong><small>≈ 99.3% probability of being Spam</small></div>
+
+    <div class="bar-group">
+      <div class="bar-head"><span>Spam / Phishing</span><strong id="bar-pct-spam">99.34%</strong></div>
+      <div class="track"><div class="fill spam-fill" id="bar-fill-spam" style="width:99.34%"></div></div>
+    </div>
+    <div class="bar-group">
+      <div class="bar-head"><span>Normal</span><strong id="bar-pct-normal">0.66%</strong></div>
+      <div class="track"><div class="fill normal-fill" id="bar-fill-normal" style="width:0.66%"></div></div>
+    </div>
+
+    <div class="result" id="spam-result" aria-live="polite">
+      <div>
+        <span class="pill is-orange" id="spam-pill">Conclusion</span><br>
+        <strong id="spam-winner-text">Classify as Spam</strong>
+        <div class="muted" id="spam-winner-sub">99.34% &gt; 0.66% — send straight to the spam folder</div>
+      </div>
+      <span style="font-size:2rem" id="spam-winner-emoji" aria-hidden="true">🐞</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-no">05 / WHY IT’S CALLED “NAÏVE”</div>
+    <h2>Independent word evidence</h2>
+    <p id="why-explain">Even though Normal emails outnumber Spam emails 4-to-1 overall (80% vs. 20%), “Free” is 15× more common in Spam (75% vs. 5%) and “Lottery” is 40× more common in Spam (50% vs. 1.25%). Multiplying those ratios overwhelms the prior.</p>
+    <div class="callout">Naïve Bayes gets its name because it assumes each word appears independently given the class—ignoring that “Free” and “Lottery” often appear together in scams. Despite that simplification, it works remarkably well in practice.</div>
+
+    <div class="quiz-card" id="quick-check">
+      <div class="eyebrow">Quick check</div>
+      <h3 style="margin-top:8px">What happens if “Lottery” appears in 0 out of 80 Normal training emails?</h3>
+      <div class="quiz-options">
+        <button type="button" class="quiz-btn" data-answer="zero">Score(Normal) becomes 0, forcing a 100% Spam prediction</button>
+        <button type="button" class="quiz-btn" data-answer="ignore">The classifier skips “Lottery” and only uses “Free”</button>
+      </div>
+      <div class="quiz-feedback" id="quiz-feedback" hidden aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section style="border-bottom:0">
+    <div class="section-no">06 / PUTTING IT ALL TOGETHER</div>
+    <h2>From Bayes’ theorem to real-world filters</h2>
+    <p>This simple model scales to thousands of words at once: during training it stores word frequencies per class, and during prediction it multiplies priors and likelihoods to pick the class with the highest score.</p>
+    <div class="takeaway">
+      <h3>The full progression</h3>
+      <p><strong>Bayes’ Theorem</strong> updates beliefs with new evidence.</p>
+      <p><strong>MAP</strong> chooses the single most probable hypothesis.</p>
+      <p><strong>Bayes Optimal</strong> combines all hypotheses weighted by posterior probability.</p>
+      <p style="margin-bottom:0"><strong>Naïve Bayes</strong> turns Bayesian classification into a fast, practical algorithm using conditional independence.</p>
+    </div>
+  </section>
+  <footer>Catching Spam &amp; Phishing Emails · An illustrative learning example for the Naïve Bayes algorithm.</footer>
+</main>
+
+<script>
+  (function () {
+    function fmtMin2(n) {
+      const rounded = Math.round(n * 1000000) / 1000000;
+      const s = rounded.toFixed(6).replace(/0+$/, '');
+      const parts = s.split('.');
+      if (!parts[1] || parts[1].length < 2) return rounded.toFixed(2);
+      return s;
+    }
+
+    function fmtScore(n) {
+      if (n === 0) return '0';
+      const rounded = Math.round(n * 1000000) / 1000000;
+      if (rounded === 0) return n.toExponential(2);
+      return rounded.toFixed(6).replace(/\.?0+$/, '');
+    }
+
+    const spamCountEl = document.getElementById('spam-count');
+    const freeSpamEl = document.getElementById('free-spam');
+    const lotterySpamEl = document.getElementById('lottery-spam');
+    const freeNormalEl = document.getElementById('free-normal');
+    const lotteryNormalEl = document.getElementById('lottery-normal');
+    const toggleFreeEl = document.getElementById('toggle-free');
+    const toggleLotteryEl = document.getElementById('toggle-lottery');
+
+    const state = { hasFree: true, hasLottery: true };
+
+    function updateModel() {
+      const spamCount = parseInt(spamCountEl.value, 10);
+      const normalCount = 100 - spamCount;
+
+      freeSpamEl.max = spamCount;
+      lotterySpamEl.max = spamCount;
+      freeNormalEl.max = normalCount;
+      lotteryNormalEl.max = normalCount;
+
+      if (parseInt(freeSpamEl.value, 10) > spamCount) freeSpamEl.value = spamCount;
+      if (parseInt(lotterySpamEl.value, 10) > spamCount) lotterySpamEl.value = spamCount;
+      if (parseInt(freeNormalEl.value, 10) > normalCount) freeNormalEl.value = normalCount;
+      if (parseInt(lotteryNormalEl.value, 10) > normalCount) lotteryNormalEl.value = normalCount;
+
+      const freeSpamCount = parseInt(freeSpamEl.value, 10);
+      const lotterySpamCount = parseInt(lotterySpamEl.value, 10);
+      const freeNormalCount = parseInt(freeNormalEl.value, 10);
+      const lotteryNormalCount = parseInt(lotteryNormalEl.value, 10);
+
+      const pSpam = spamCount / 100;
+      const pNormal = normalCount / 100;
+      const pFreeSpam = freeSpamCount / spamCount;
+      const pLotterySpam = lotterySpamCount / spamCount;
+      const pFreeNormal = freeNormalCount / normalCount;
+      const pLotteryNormal = lotteryNormalCount / normalCount;
+
+      // Section 01
+      document.getElementById('split-summary').textContent = `${spamCount} Spam · ${normalCount} Normal`;
+      document.getElementById('prior-summary').textContent =
+        `P(Spam) = ${spamCount}/100 = ${fmtMin2(pSpam)} · P(Normal) = ${normalCount}/100 = ${fmtMin2(pNormal)}`;
+
+      document.getElementById('val-p-spam').textContent = `P(Spam) = ${fmtMin2(pSpam)}`;
+      document.getElementById('val-p-normal').textContent = `P(Normal) = ${fmtMin2(pNormal)}`;
+
+      document.getElementById('val-free-spam').textContent = `${freeSpamCount}/${spamCount} → ${fmtMin2(pFreeSpam)}`;
+      document.getElementById('val-lottery-spam').textContent = `${lotterySpamCount}/${spamCount} → ${fmtMin2(pLotterySpam)}`;
+      document.getElementById('val-free-normal').textContent = `${freeNormalCount}/${normalCount} → ${fmtMin2(pFreeNormal)}`;
+      document.getElementById('val-lottery-normal').textContent = `${lotteryNormalCount}/${normalCount} → ${fmtMin2(pLotteryNormal)}`;
+
+      // Section 02
+      const words = [];
+      if (state.hasFree) words.push('Free');
+      if (state.hasLottery) words.push('Lottery');
+      const emailLabel = words.length ? `"${words.join(' ')}"` : '(no trigger words)';
+
+      document.getElementById('email-text-display').textContent = words.length ? `“${words.join(' ')}”` : 'Empty / no trigger words';
+      toggleFreeEl.textContent = `${state.hasFree ? '✓' : '+'} “Free”`;
+      toggleFreeEl.setAttribute('aria-pressed', state.hasFree ? 'true' : 'false');
+      toggleLotteryEl.textContent = `${state.hasLottery ? '✓' : '+'} “Lottery”`;
+      toggleLotteryEl.setAttribute('aria-pressed', state.hasLottery ? 'true' : 'false');
+
+      function formulaTerms(cls) {
+        const parts = [];
+        if (state.hasFree) parts.push(`P(Free | ${cls})`);
+        if (state.hasLottery) parts.push(`P(Lottery | ${cls})`);
+        parts.push(`P(${cls})`);
+        return parts.join(' × ');
+      }
+
+      document.getElementById('nb-formula-spam').textContent =
+        `P(Spam | ${emailLabel}) = [ ${formulaTerms('Spam')} ] / P(${emailLabel})`;
+      document.getElementById('nb-formula-normal').textContent =
+        `P(Normal | ${emailLabel}) = [ ${formulaTerms('Normal')} ] / P(${emailLabel})`;
+      document.getElementById('denom-name').textContent = `P(${emailLabel})`;
+
+      // Section 03
+      const spamFactors = [];
+      const normalFactors = [];
+      let scoreSpam = pSpam;
+      let scoreNormal = pNormal;
+
+      if (state.hasFree) {
+        spamFactors.push(fmtMin2(pFreeSpam));
+        normalFactors.push(fmtMin2(pFreeNormal));
+        scoreSpam *= pFreeSpam;
+        scoreNormal *= pFreeNormal;
+      }
+      if (state.hasLottery) {
+        spamFactors.push(fmtMin2(pLotterySpam));
+        normalFactors.push(fmtMin2(pLotteryNormal));
+        scoreSpam *= pLotterySpam;
+        scoreNormal *= pLotteryNormal;
+      }
+      spamFactors.push(fmtMin2(pSpam));
+      normalFactors.push(fmtMin2(pNormal));
+
+      const sSpamStr = fmtScore(scoreSpam);
+      const sNormalStr = fmtScore(scoreNormal);
+
+      document.getElementById('score-spam-val').textContent = sSpamStr;
+      document.getElementById('score-spam-eq').textContent =
+        spamFactors.length > 1 ? `${spamFactors.join(' × ')} = ${sSpamStr}` : `Prior only = ${sSpamStr}`;
+
+      document.getElementById('score-normal-val').textContent = sNormalStr;
+      document.getElementById('score-normal-eq').textContent =
+        normalFactors.length > 1 ? `${normalFactors.join(' × ')} = ${sNormalStr}` : `Prior only = ${sNormalStr}`;
+
+      const spamBox = document.getElementById('score-spam-box');
+      const normalBox = document.getElementById('score-normal-box');
+
+      // Section 04
+      const totalScore = scoreSpam + scoreNormal;
+      const resultEl = document.getElementById('spam-result');
+      const pillEl = document.getElementById('spam-pill');
+      const winnerTextEl = document.getElementById('spam-winner-text');
+      const winnerSubEl = document.getElementById('spam-winner-sub');
+      const winnerEmojiEl = document.getElementById('spam-winner-emoji');
+
+      if (totalScore === 0) {
+        spamBox.className = '';
+        normalBox.className = '';
+        document.getElementById('norm-math').innerHTML =
+          `P(Spam | ${emailLabel}) = 0 / (0 + 0) = <strong>Undefined</strong>` +
+          `<small>At least one selected word has 0 occurrences in both Spam and Normal emails</small>`;
+        document.getElementById('bar-pct-spam').textContent = '0.00%';
+        document.getElementById('bar-pct-normal').textContent = '0.00%';
+        document.getElementById('bar-fill-spam').style.width = '0%';
+        document.getElementById('bar-fill-normal').style.width = '0%';
+        resultEl.className = 'result is-tie';
+        pillEl.className = 'pill';
+        winnerTextEl.textContent = 'Cannot decide (both scores are 0)';
+        winnerSubEl.textContent = 'Zero frequency in both classes produces 0 / 0';
+        winnerEmojiEl.textContent = '⚖️';
+      } else {
+        const postSpam = (scoreSpam / totalScore) * 100;
+        const postNormal = (scoreNormal / totalScore) * 100;
+        const spamPctStr = `${postSpam.toFixed(2)}%`;
+        const normalPctStr = `${postNormal.toFixed(2)}%`;
+
+        document.getElementById('norm-math').innerHTML =
+          `P(Spam | ${emailLabel}) = ${sSpamStr} / (${sSpamStr} + ${sNormalStr}) = <strong>${spamPctStr}</strong>` +
+          `<small>≈ ${postSpam.toFixed(1)}% probability of being Spam</small>`;
+
+        document.getElementById('bar-pct-spam').textContent = spamPctStr;
+        document.getElementById('bar-pct-normal').textContent = normalPctStr;
+        document.getElementById('bar-fill-spam').style.width = `${postSpam}%`;
+        document.getElementById('bar-fill-normal').style.width = `${postNormal}%`;
+
+        if (Math.abs(postSpam - postNormal) < 0.005) {
+          spamBox.className = '';
+          normalBox.className = '';
+          resultEl.className = 'result is-tie';
+          pillEl.className = 'pill';
+          winnerTextEl.textContent = 'Tied: Spam or Normal';
+          winnerSubEl.textContent = `${spamPctStr} vs ${normalPctStr}`;
+          winnerEmojiEl.textContent = '⚖️';
+        } else if (postSpam > postNormal) {
+          spamBox.className = 'winner-spam';
+          normalBox.className = '';
+          resultEl.className = 'result';
+          pillEl.className = 'pill is-orange';
+          winnerTextEl.textContent = 'Classify as Spam';
+          winnerSubEl.textContent = `${spamPctStr} > ${normalPctStr} — flag or move to spam folder`;
+          winnerEmojiEl.textContent = '🐞';
+        } else {
+          spamBox.className = '';
+          normalBox.className = 'winner-normal';
+          resultEl.className = 'result is-normal';
+          pillEl.className = 'pill';
+          winnerTextEl.textContent = 'Classify as Normal';
+          winnerSubEl.textContent = `${normalPctStr} > ${spamPctStr} — deliver to inbox`;
+          winnerEmojiEl.textContent = '✉️';
+        }
+      }
+
+      // Section 05 dynamic insight
+      const freeRatio = pFreeNormal > 0 ? `${(pFreeSpam / pFreeNormal).toFixed(1).replace(/\.0$/, '')}×` : 'far';
+      const lotteryRatio = pLotteryNormal > 0 ? `${(pLotterySpam / pLotteryNormal).toFixed(1).replace(/\.0$/, '')}×` : 'far';
+      document.getElementById('why-explain').textContent =
+        `In this training set, Spam makes up ${spamCount}% and Normal makes up ${normalCount}%. “Free” appears in ${(pFreeSpam * 100).toFixed(0)}% of Spam vs. ${(pFreeNormal * 100).toFixed(2).replace(/\.?0+$/, '')}% of Normal (${freeRatio}), and “Lottery” appears in ${(pLotterySpam * 100).toFixed(0)}% of Spam vs. ${(pLotteryNormal * 100).toFixed(2).replace(/\.?0+$/, '')}% of Normal (${lotteryRatio}).`;
+    }
+
+    [spamCountEl, freeSpamEl, lotterySpamEl, freeNormalEl, lotteryNormalEl].forEach((el) => {
+      el.addEventListener('input', updateModel);
+    });
+
+    toggleFreeEl.addEventListener('click', () => {
+      state.hasFree = !state.hasFree;
+      updateModel();
+    });
+
+    toggleLotteryEl.addEventListener('click', () => {
+      state.hasLottery = !state.hasLottery;
+      updateModel();
+    });
+
+    document.getElementById('spam-reset').addEventListener('click', () => {
+      spamCountEl.value = 20;
+      freeSpamEl.max = 20; freeSpamEl.value = 15;
+      lotterySpamEl.max = 20; lotterySpamEl.value = 10;
+      freeNormalEl.max = 80; freeNormalEl.value = 4;
+      lotteryNormalEl.max = 80; lotteryNormalEl.value = 1;
+      state.hasFree = true;
+      state.hasLottery = true;
+      updateModel();
+    });
+
+    /* Quick knowledge check */
+    const quizBtns = document.querySelectorAll('#quick-check .quiz-btn');
+    const quizFeedback = document.getElementById('quiz-feedback');
+
+    quizBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const choice = btn.dataset.answer;
+        quizBtns.forEach((b) => b.classList.remove('correct', 'incorrect'));
+        quizFeedback.hidden = false;
+
+        if (choice === 'zero') {
+          btn.classList.add('correct');
+          quizFeedback.className = 'quiz-feedback correct';
+          quizFeedback.innerHTML =
+            '<strong>Correct!</strong> Because Naïve Bayes multiplies probabilities together, a single 0 wipes out the entire product: <em>0.05 × 0 × 0.80 = 0</em>. Try sliding Normal “Lottery” to 0 above to see it happen—and why real filters use <em>Laplace smoothing</em> (+1) to avoid zeros.';
+        } else {
+          btn.classList.add('incorrect');
+          quizFeedback.className = 'quiz-feedback incorrect';
+          quizFeedback.innerHTML =
+            '<strong>Not quite.</strong> Naïve Bayes does not skip unseen words—it multiplies by <em>P(Lottery | Normal) = 0</em>, turning the whole Normal score into 0. Try dragging Normal “Lottery” down to 0 above to see why real classifiers add <em>Laplace smoothing</em>.';
+        }
+      });
+    });
+
+    updateModel();
+  })();
+</script>
+</body>
+</html>
