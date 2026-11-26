@@ -1,9 +1,9 @@
 # nb
 Session Resources for the Naive Bayes and Optimal Classifer Talk by Himanshu, Sahil and Vedant
 
-[⭐[PDF] Session Slides on Bayes Optimal Classifier - GitHub](https://github.com/himanshubalani/nb/blob/55096c09cc84f27584f7b9c3f3a0d745024e076d/Bayes%20Optimal%20Classifier.pdf)
+[⭐[PDF] Session Slides on Bayes Optimal Classifier - GitHub](https://github.com/himanshubalani/nb/blob/main/Bayes%20Optimal%20Classifier.pdf)
 
-[⭐[PDF] Session Slides on Bayes Optimal Classifier - Direct Download](https://raw.githubusercontent.com/himanshubalani/nb/55096c09cc84f27584f7b9c3f3a0d745024e076d/Bayes%20Optimal%20Classifier.pdf)
+[⭐[PDF] Session Slides on Bayes Optimal Classifier - Direct Download](https://raw.githubusercontent.com/himanshubalani/nb/main/Bayes%20Optimal%20Classifier.pdf)
 
 ⭐[Websites] A bunch of websites for the examples you just read
  - [Comparing Apples and Oranges - Understanding Bayes' Classifier](https://www.himanshubalani.com/nb/apple)
